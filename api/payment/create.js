@@ -15,19 +15,19 @@ function checkEnv() {
 }
 
 export default async function handler(req, res) {
-  console.log("[payment/create] invoked", { method: req.method, url: req.url });
-
-  const envState = checkEnv();
-  // Log presence only — do not print secrets
-  console.log("[payment/create] env", { hasAppId: envState.hasAppId, hasSecret: envState.hasSecret, env: envState.env });
-
-  if (req.method !== "POST") {
-    res.setHeader("Allow", "POST");
-    return setJson(res, 405, { error: "Method not allowed" });
-  }
-
-  // Basic request logging (mask values)
   try {
+    console.log("[payment/create] invoked", { method: req.method, url: req.url });
+
+    const envState = checkEnv();
+    // Log presence only — do not print secrets
+    console.log("[payment/create] env", { hasAppId: envState.hasAppId, hasSecret: envState.hasSecret, env: envState.env });
+
+    if (req.method !== "POST") {
+      res.setHeader("Allow", "POST");
+      return setJson(res, 405, { error: "Method not allowed" });
+    }
+
+    // Basic request logging (mask values)
     const body = req.body ?? {};
     console.log("[payment/create] bodyKeys", Object.keys(body));
 
@@ -55,7 +55,7 @@ export default async function handler(req, res) {
     console.log("[payment/create] success", { orderId: result.orderId, hasQr: Boolean(result.qrImage) });
     return setJson(res, 200, result);
   } catch (err) {
-    console.error("[payment/create] error", err instanceof Error ? err.message : err);
+    console.error("[payment/create] error", err instanceof Error ? err.stack || err.message : err);
     return setJson(res, 500, {
       error: err instanceof Error ? err.message : "Failed to create payment",
     });

@@ -108,7 +108,7 @@ export async function createCashfreePayment({ amount, phone, packageLabel, profi
     });
     qrImage = normalizeQrImage(pay.data?.payload) ?? pay.data?.url ?? null;
   } catch (err) {
-    console.warn("[cashfree] UPI QR API unavailable, using hosted checkout:", err.message);
+    console.warn("[cashfree] UPI QR API unavailable, using hosted checkout:", err instanceof Error ? err.message : err);
   }
 
   return {
