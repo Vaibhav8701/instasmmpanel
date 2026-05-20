@@ -531,9 +531,9 @@ function Index() {
           }
         }}
       >
-        <DialogContent className="w-[calc(100vw-1rem)] max-w-5xl overflow-hidden border border-white/10 bg-[#0b0b0f] p-0 text-white shadow-2xl sm:w-full">
-          <div className="grid min-h-[min(760px,calc(100vh-2rem))] md:grid-cols-[0.95fr_1.05fr]">
-            <aside className="flex flex-col justify-between bg-[radial-gradient(circle_at_top_left,rgba(236,72,153,0.22),transparent_32%),radial-gradient(circle_at_top_right,rgba(168,85,247,0.18),transparent_28%),linear-gradient(180deg,#0f0f15,#09090c)] px-5 py-6 sm:px-6 sm:py-7">
+        <DialogContent className="h-[100dvh] w-[100vw] max-w-none overflow-hidden border-0 bg-[#0b0b0f] p-0 text-white shadow-none sm:h-auto sm:w-[calc(100vw-1rem)] sm:max-w-5xl sm:rounded-3xl sm:border sm:border-white/10 sm:shadow-2xl">
+          <div className="flex h-full flex-col md:grid md:min-h-[min(760px,calc(100vh-2rem))] md:grid-cols-[0.95fr_1.05fr]">
+            <aside className="hidden flex-col justify-between bg-[radial-gradient(circle_at_top_left,rgba(236,72,153,0.22),transparent_32%),radial-gradient(circle_at_top_right,rgba(168,85,247,0.18),transparent_28%),linear-gradient(180deg,#0f0f15,#09090c)] px-5 py-6 sm:px-6 sm:py-7 md:flex">
               <DialogHeader className="space-y-4 text-left">
                 <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">
                   Secure checkout
@@ -572,7 +572,13 @@ function Index() {
               <p className="mt-6 text-xs text-white/45">Powered by Cashfree Payments</p>
             </aside>
 
-            <section className="flex min-h-0 flex-col bg-[#eef1f6] p-4 sm:p-6 md:border-l md:border-white/10">
+            <section className="flex min-h-0 flex-1 flex-col bg-[#eef1f6] p-3 sm:p-6 md:border-l md:border-white/10">
+              <div className="mb-3 rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,255,255,0.94))] px-4 py-4 text-slate-900 shadow-[0_10px_30px_rgba(15,23,42,0.08)] md:hidden">
+                <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Secure checkout</div>
+                <div className="mt-1 text-xl font-semibold leading-tight">Pay {formatINR(selected?.price ?? 0)}</div>
+                <div className="mt-1 text-sm text-slate-600">{selected?.label} followers • Cashfree</div>
+              </div>
+
               <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.6rem] bg-white shadow-[0_20px_80px_rgba(15,23,42,0.16)]">
                 <div className="border-b border-slate-200 px-4 py-3 sm:px-5 sm:py-4">
                   <div className="flex items-center justify-between gap-3">
@@ -588,7 +594,7 @@ function Index() {
 
                 <div className="min-h-0 flex-1 overflow-auto p-3 sm:p-4">
                   {paymentSuccess ? (
-                    <div className="flex min-h-[420px] items-center justify-center rounded-[1.4rem] border border-emerald-200 bg-emerald-50 p-6 text-center">
+                    <div className="flex min-h-[340px] items-center justify-center rounded-[1.4rem] border border-emerald-200 bg-emerald-50 p-6 text-center sm:min-h-[420px]">
                       <div>
                         <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-2xl text-emerald-600">
                           ✓
@@ -598,16 +604,16 @@ function Index() {
                       </div>
                     </div>
                   ) : paymentQr ? (
-                    <div className="flex min-h-[420px] items-center justify-center rounded-[1.4rem] border border-slate-200 bg-slate-50 p-4 sm:p-6">
-                      <div className="w-full max-w-md rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
-                        <img src={paymentQr} alt="Cashfree UPI QR" className="mx-auto aspect-square w-full max-w-[360px] object-contain" />
+                    <div className="flex min-h-[340px] items-center justify-center rounded-[1.4rem] border border-slate-200 bg-slate-50 p-3 sm:min-h-[420px] sm:p-6">
+                      <div className="w-full max-w-sm rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200 sm:max-w-md sm:p-4">
+                        <img src={paymentQr} alt="Cashfree UPI QR" className="mx-auto aspect-square w-full max-w-[280px] object-contain sm:max-w-[360px]" />
                         <p className="mt-3 text-center text-xs text-slate-500">Open any UPI app and scan this QR code.</p>
                       </div>
                     </div>
                   ) : (
                     <div
                       ref={checkoutContainerRef}
-                      className="min-h-[520px] w-full overflow-hidden rounded-[1.4rem] bg-white"
+                      className="h-[calc(100dvh-18rem)] min-h-[340px] w-full overflow-hidden rounded-[1.4rem] bg-white sm:h-[min(78vh,640px)] sm:min-h-[520px]"
                     />
                   )}
                 </div>
