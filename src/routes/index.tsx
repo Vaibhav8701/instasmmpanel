@@ -248,12 +248,21 @@ function Index() {
         }),
       });
 
-      const data = (await res.json()) as {
+      // Some server errors return HTML/text (platform errors) — handle gracefully
+      const text = await res.text();
+      let data: {
         orderId?: string;
         paymentSessionId?: string;
         qrImage?: string | null;
         error?: string;
-      };
+      } = {};
+
+      try {
+        data = text ? (JSON.parse(text) as typeof data) : {};
+      } catch (parseErr) {
+        console.error("/api/payment/create returned non-JSON response:", text);
+        throw new Error(text || "Server returned an unexpected response");
+      }
 
       if (!res.ok) {
         throw new Error(data.error || "Could not start Cashfree payment");
