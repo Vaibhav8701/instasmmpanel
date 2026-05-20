@@ -531,36 +531,88 @@ function Index() {
           }
         }}
       >
-        <DialogContent className="sm:max-w-sm bg-black text-white border-black">
-          <DialogHeader>
-            <DialogTitle className="text-center text-white">
-              Pay {formatINR(selected?.price ?? 0)} for {selected?.label} followers
-            </DialogTitle>
-            <DialogDescription className="text-center text-white/70">
-              {paymentSuccess
-                ? "Payment received. Your order is being processed."
-                : "Scan & pay via Cashfree — GPay, PhonePe, Paytm, or any UPI app"}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col items-center gap-4 py-2">
-            {paymentSuccess ? (
-              <p className="rounded-xl bg-green-600/20 px-4 py-3 text-center text-sm font-semibold text-green-300">
-                Payment successful
-              </p>
-            ) : paymentQr ? (
-              <div className="rounded-xl bg-white p-3">
-                <img src={paymentQr} alt="Cashfree UPI QR" className="h-64 w-64 object-contain" />
+        <DialogContent className="w-[calc(100vw-1rem)] max-w-5xl overflow-hidden border border-white/10 bg-[#0b0b0f] p-0 text-white shadow-2xl sm:w-full">
+          <div className="grid min-h-[min(760px,calc(100vh-2rem))] md:grid-cols-[0.95fr_1.05fr]">
+            <aside className="flex flex-col justify-between bg-[radial-gradient(circle_at_top_left,rgba(236,72,153,0.22),transparent_32%),radial-gradient(circle_at_top_right,rgba(168,85,247,0.18),transparent_28%),linear-gradient(180deg,#0f0f15,#09090c)] px-5 py-6 sm:px-6 sm:py-7">
+              <DialogHeader className="space-y-4 text-left">
+                <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">
+                  Secure checkout
+                </div>
+                <div className="space-y-2">
+                  <DialogTitle className="text-2xl font-semibold leading-tight text-white sm:text-3xl">
+                    Pay {formatINR(selected?.price ?? 0)} for {selected?.label} followers
+                  </DialogTitle>
+                  <DialogDescription className="max-w-md text-sm leading-6 text-white/65">
+                    {paymentSuccess
+                      ? "Payment received. Your order is being processed."
+                      : "Use Cashfree checkout or scan the QR code with any UPI app. The layout is optimized for phones and large screens."}
+                  </DialogDescription>
+                </div>
+              </DialogHeader>
+
+              <div className="mt-6 space-y-3 text-sm text-white/75">
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-xs uppercase tracking-[0.2em] text-white/50">Order</div>
+                  <div className="mt-1 font-medium text-white">{selected?.label} followers</div>
+                  <div className="mt-1 text-white/65">{formatINR(selected?.price ?? 0)}</div>
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <div className="text-xs uppercase tracking-[0.2em] text-white/50">Customer</div>
+                  <div className="mt-1 font-medium text-white">+91 {phone || "••••••••••"}</div>
+                  <div className="mt-1 break-all text-white/65">{username || "Instagram profile / link"}</div>
+                </div>
+                {cashfreeOrderId && (
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="text-xs uppercase tracking-[0.2em] text-white/50">Order ID</div>
+                    <div className="mt-1 break-all text-xs text-white/70">{cashfreeOrderId}</div>
+                  </div>
+                )}
               </div>
-            ) : (
-              <div
-                ref={checkoutContainerRef}
-                className="min-h-[420px] w-full overflow-hidden rounded-xl bg-white"
-              />
-            )}
-            {cashfreeOrderId && !paymentSuccess && (
-              <p className="text-center text-xs text-white/50">Order: {cashfreeOrderId}</p>
-            )}
-            <p className="text-center text-xs text-white/60">Powered by Cashfree Payments</p>
+
+              <p className="mt-6 text-xs text-white/45">Powered by Cashfree Payments</p>
+            </aside>
+
+            <section className="flex min-h-0 flex-col bg-[#eef1f6] p-4 sm:p-6 md:border-l md:border-white/10">
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.6rem] bg-white shadow-[0_20px_80px_rgba(15,23,42,0.16)]">
+                <div className="border-b border-slate-200 px-4 py-3 sm:px-5 sm:py-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-semibold text-slate-900">Cashfree Checkout</div>
+                      <div className="text-xs text-slate-500">Scan, pay, and return here automatically</div>
+                    </div>
+                    <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                      {selected?.label}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="min-h-0 flex-1 overflow-auto p-3 sm:p-4">
+                  {paymentSuccess ? (
+                    <div className="flex min-h-[420px] items-center justify-center rounded-[1.4rem] border border-emerald-200 bg-emerald-50 p-6 text-center">
+                      <div>
+                        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-2xl text-emerald-600">
+                          ✓
+                        </div>
+                        <p className="text-lg font-semibold text-emerald-900">Payment successful</p>
+                        <p className="mt-1 text-sm text-emerald-700">Your order is being processed now.</p>
+                      </div>
+                    </div>
+                  ) : paymentQr ? (
+                    <div className="flex min-h-[420px] items-center justify-center rounded-[1.4rem] border border-slate-200 bg-slate-50 p-4 sm:p-6">
+                      <div className="w-full max-w-md rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+                        <img src={paymentQr} alt="Cashfree UPI QR" className="mx-auto aspect-square w-full max-w-[360px] object-contain" />
+                        <p className="mt-3 text-center text-xs text-slate-500">Open any UPI app and scan this QR code.</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      ref={checkoutContainerRef}
+                      className="min-h-[520px] w-full overflow-hidden rounded-[1.4rem] bg-white"
+                    />
+                  )}
+                </div>
+              </div>
+            </section>
           </div>
         </DialogContent>
       </Dialog>
