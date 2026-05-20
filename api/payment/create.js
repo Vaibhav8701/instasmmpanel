@@ -1,7 +1,8 @@
 import { createCashfreePayment } from "../../../server/cashfree.mjs";
 
 function setJson(res, statusCode, payload) {
-  res.status(statusCode).setHeader("Content-Type", "application/json");
+  res.statusCode = statusCode;
+  res.setHeader("Content-Type", "application/json");
   res.end(JSON.stringify(payload));
 }
 
