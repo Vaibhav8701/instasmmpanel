@@ -121,6 +121,14 @@ function checkEnv() {
   };
 }
 
+function normalizeCashfreeErrorMessage(message) {
+  const text = String(message || "");
+  if (/not enabled or approved|whitelist|whitelisting/i.test(text)) {
+    return "Cashfree blocked this payment because your domain is not whitelisted. Add instasmmpanel.vercel.app in Merchant Dashboard > Developers > Whitelisting, then retry the order.";
+  }
+  return text;
+}
+
 export default async function handler(req, res) {
   try {
     console.log("[payment/create] invoked", { method: req.method, url: req.url });
@@ -162,9 +170,11 @@ export default async function handler(req, res) {
     console.log("[payment/create] success", { orderId: result.orderId, hasQr: Boolean(result.qrImage) });
     return setJson(res, 200, result);
   } catch (err) {
-    console.error("[payment/create] error", err instanceof Error ? err.stack || err.message : err);
+    const message = err instanceof Error ? err.stack || err.message : String(err);
+    console.error("[payment/create] error", message);
+    const friendlyMessage = normalizeCashfreeErrorMessage(err instanceof Error ? err.message : err);
     return setJson(res, 500, {
-      error: err instanceof Error ? err.message : "Failed to create payment",
+      error: friendlyMessage || "Failed to create payment",
     });
   }
 }
