@@ -1,0 +1,1 @@
+INSERT INTO public.user_roles (user_id, role) SELECT id, 'admin'::app_role FROM auth.users WHERE email = 'victus458801@gmail.com' ON CONFLICT (user_id, role) DO NOTHING;
