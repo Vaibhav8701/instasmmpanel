@@ -27,12 +27,21 @@ async function cashfreeRequest(path, options = {}) {
     ...options,
     headers: { ...cashfreeHeaders(), ...options.headers },
   });
-  const data = await res.json().catch(() => ({}));
+  const rawText = await res.text();
+  let data = {};
+  if (rawText) {
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      data = { raw: rawText };
+    }
+  }
   if (!res.ok) {
     const message =
       data?.message ||
       data?.error?.message ||
       (typeof data?.error === "string" ? data.error : null) ||
+      rawText ||
       `Cashfree request failed (${res.status})`;
     throw new Error(message);
   }
