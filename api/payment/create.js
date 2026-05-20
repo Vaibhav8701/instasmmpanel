@@ -129,6 +129,17 @@ function normalizeCashfreeErrorMessage(message) {
   return text;
 }
 
+function normalizeUrlValue(value, fallback) {
+  const raw = String(value || fallback || "").trim();
+  const cleaned = raw.replace(/^CASHFREE_RETURN_URL\s*=\s*/i, "");
+
+  try {
+    return new URL(cleaned).toString();
+  } catch {
+    return fallback;
+  }
+}
+
 export default async function handler(req, res) {
   try {
     console.log("[payment/create] invoked", { method: req.method, url: req.url });
@@ -142,7 +153,6 @@ export default async function handler(req, res) {
       return setJson(res, 405, { error: "Method not allowed" });
     }
 
-    // Basic request logging (mask values)
     const body = req.body ?? {};
     console.log("[payment/create] bodyKeys", Object.keys(body));
 
