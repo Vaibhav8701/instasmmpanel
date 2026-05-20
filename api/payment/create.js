@@ -78,7 +78,10 @@ async function createCashfreePayment({ amount, phone, packageLabel, profileLink 
         customer_name: "InstaSMM Customer",
       },
       order_meta: {
-        return_url: process.env.CASHFREE_RETURN_URL || "https://instasmmpanel.in/?payment=success",
+          return_url: normalizeUrlValue(
+            process.env.CASHFREE_RETURN_URL,
+            "https://instasmmpanel.in/?payment=success",
+          ),
         ...(process.env.CASHFREE_NOTIFY_URL ? { notify_url: process.env.CASHFREE_NOTIFY_URL } : {}),
       },
       order_note: `${packageLabel} — ${profileLink}`,
@@ -124,7 +127,7 @@ function checkEnv() {
 function normalizeCashfreeErrorMessage(message) {
   const text = String(message || "");
   if (/not enabled or approved|whitelist|whitelisting/i.test(text)) {
-    return "Cashfree blocked this payment because your domain is not whitelisted. Add instasmmpanel.vercel.app in Merchant Dashboard > Developers > Whitelisting, then retry the order.";
+    return "Cashfree blocked this payment because your domain is not whitelisted. Add instasmmpanel.in in Merchant Dashboard > Developers > Whitelisting, then retry the order.";
   }
   return text;
 }
