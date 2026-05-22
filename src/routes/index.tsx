@@ -670,8 +670,8 @@ function Index() {
 
       {/* Cashfree UPI QR dialog */}
       <Dialog open={payDialogOpen} onOpenChange={closePaymentDialog}>
-        <DialogContent className="h-[100dvh] w-[100vw] max-w-none overflow-hidden border-0 bg-[#0b0b0f] p-0 text-white shadow-none sm:h-auto sm:w-[calc(100vw-1rem)] sm:max-w-5xl sm:rounded-3xl sm:border sm:border-white/10 sm:shadow-2xl">
-          <div className="flex h-full flex-col md:grid md:min-h-[min(760px,calc(100vh-2rem))] md:grid-cols-[0.95fr_1.05fr]">
+        <DialogContent className="max-h-[calc(100dvh-0.75rem)] w-[calc(100vw-0.75rem)] max-w-none overflow-hidden border-0 bg-[#0b0b0f] p-0 text-white shadow-none sm:max-h-[calc(100dvh-1rem)] sm:w-[calc(100vw-1rem)] sm:max-w-5xl sm:rounded-3xl sm:border sm:border-white/10 sm:shadow-2xl">
+          <div className="flex h-full min-h-0 flex-col md:grid md:min-h-[min(760px,calc(100vh-2rem))] md:grid-cols-[0.95fr_1.05fr]">
             <aside className="hidden flex-col justify-between bg-[radial-gradient(circle_at_top_left,rgba(236,72,153,0.22),transparent_32%),radial-gradient(circle_at_top_right,rgba(168,85,247,0.18),transparent_28%),linear-gradient(180deg,#0f0f15,#09090c)] px-5 py-6 sm:px-6 sm:py-7 md:flex">
               <DialogHeader className="space-y-4 text-left">
                 <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">
@@ -711,15 +711,15 @@ function Index() {
               <p className="mt-6 text-xs text-white/45">Powered by Cashfree Payments</p>
             </aside>
 
-            <section className="flex min-h-0 flex-1 flex-col bg-[#eef1f6] p-3 sm:p-6 md:border-l md:border-white/10">
-              <div className="mb-3 rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,255,255,0.94))] px-4 py-4 text-slate-900 shadow-[0_10px_30px_rgba(15,23,42,0.08)] md:hidden">
+            <section className="flex min-h-0 flex-1 flex-col bg-[#eef1f6] px-2 pb-2 pt-2 sm:p-6 md:border-l md:border-white/10">
+              <div className="mb-2 rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,255,255,0.94))] px-4 py-3 text-slate-900 shadow-[0_10px_30px_rgba(15,23,42,0.08)] md:hidden sm:mb-3 sm:py-4">
                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Secure checkout</div>
-                <div className="mt-1 text-xl font-semibold leading-tight">Pay {formatINR(selected?.price ?? 0)}</div>
+                <div className="mt-1 text-lg font-semibold leading-tight sm:text-xl">Pay {formatINR(selected?.price ?? 0)}</div>
                 <div className="mt-1 text-sm text-slate-600">{selected?.label} followers • {selectedPaymentGateway ? paymentGatewayLabel(selectedPaymentGateway) : "Choose gateway"}</div>
               </div>
 
-              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.6rem] bg-white shadow-[0_20px_80px_rgba(15,23,42,0.16)]">
-                <div className="border-b border-slate-200 px-4 py-3 sm:px-5 sm:py-4">
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-[1.4rem] rounded-b-[1.6rem] bg-white shadow-[0_20px_80px_rgba(15,23,42,0.16)] sm:rounded-[1.6rem]">
+                <div className="border-b border-slate-200 px-3 py-3 sm:px-5 sm:py-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <div className="text-sm font-semibold text-slate-900">
@@ -731,32 +731,32 @@ function Index() {
                           : "Pick one of the available gateways to continue"}
                       </div>
                     </div>
-                    <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                    <div className="max-w-[42%] truncate rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600 sm:max-w-none">
                       {selected?.label}
                     </div>
                   </div>
                 </div>
 
-                <div className="min-h-0 flex-1 overflow-auto p-3 sm:p-4">
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2 sm:p-4">
                   {!selectedPaymentGateway && hasMultipleGateways ? (
-                    <div className="grid gap-3 md:grid-cols-2">
+                    <div className="grid gap-3 sm:grid-cols-2">
                       {activeGateways.map((gateway) => (
                         <button
                           key={gateway}
                           type="button"
                           onClick={() => startPayment(gateway)}
-                          className="rounded-[1.4rem] border border-slate-200 bg-slate-50 p-5 text-left transition hover:border-brand-pink/40 hover:bg-white"
+                          className="min-h-[150px] rounded-[1.4rem] border border-slate-200 bg-slate-50 p-4 text-left transition active:scale-[0.99] hover:border-brand-pink/40 hover:bg-white sm:p-5"
                         >
-                          <div className="text-lg font-semibold text-slate-900">{paymentGatewayLabel(gateway)}</div>
+                          <div className="text-base font-semibold text-slate-900 sm:text-lg">{paymentGatewayLabel(gateway)}</div>
                           <div className="mt-1 text-sm leading-6 text-slate-600">{paymentGatewayDescription(gateway)}</div>
-                          <div className="mt-4 inline-flex rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">
+                          <div className="mt-4 inline-flex rounded-full bg-slate-900 px-3 py-1 text-[11px] font-semibold text-white sm:text-xs">
                             Continue with {paymentGatewayLabel(gateway)}
                           </div>
                         </button>
                       ))}
                     </div>
                   ) : paymentSuccess ? (
-                    <div className="flex min-h-[340px] items-center justify-center rounded-[1.4rem] border border-emerald-200 bg-emerald-50 p-6 text-center sm:min-h-[420px]">
+                    <div className="flex min-h-[280px] items-center justify-center rounded-[1.4rem] border border-emerald-200 bg-emerald-50 p-5 text-center sm:min-h-[420px] sm:p-6">
                       <div>
                         <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-2xl text-emerald-600">
                           ✓
@@ -766,16 +766,16 @@ function Index() {
                       </div>
                     </div>
                   ) : selectedPaymentGateway === "cashfree" && paymentQr ? (
-                    <div className="flex min-h-[340px] items-center justify-center rounded-[1.4rem] border border-slate-200 bg-slate-50 p-3 sm:min-h-[420px] sm:p-6">
+                    <div className="flex min-h-[280px] items-center justify-center rounded-[1.4rem] border border-slate-200 bg-slate-50 p-2 sm:min-h-[420px] sm:p-6">
                       <div className="w-full max-w-sm rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200 sm:max-w-md sm:p-4">
-                        <img src={paymentQr} alt="Cashfree UPI QR" className="mx-auto aspect-square w-full max-w-[280px] object-contain sm:max-w-[360px]" />
+                        <img src={paymentQr} alt="Cashfree UPI QR" className="mx-auto aspect-square w-full max-w-[240px] object-contain sm:max-w-[360px]" />
                         <p className="mt-3 text-center text-xs text-slate-500">Open any UPI app and scan this QR code.</p>
                       </div>
                     </div>
                   ) : selectedPaymentGateway === "razorpay" ? (
-                    <div className="flex min-h-[340px] items-center justify-center rounded-[1.4rem] border border-slate-200 bg-slate-50 p-4 text-center sm:min-h-[420px] sm:p-6">
-                      <div className="max-w-md rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-                        <div className="text-lg font-semibold text-slate-900">Razorpay popup will open automatically</div>
+                    <div className="flex min-h-[280px] items-center justify-center rounded-[1.4rem] border border-slate-200 bg-slate-50 p-3 text-center sm:min-h-[420px] sm:p-6">
+                      <div className="w-full max-w-md rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-5">
+                        <div className="text-base font-semibold text-slate-900 sm:text-lg">Razorpay popup will open automatically</div>
                         <p className="mt-2 text-sm leading-6 text-slate-600">
                           Complete the payment in the Razorpay window. You can pay by UPI, card, or wallet.
                         </p>
@@ -783,7 +783,7 @@ function Index() {
                           type="button"
                           onClick={startRazorpayPayment}
                           disabled={paymentLoading}
-                          className="mt-4 inline-flex rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                          className="mt-4 inline-flex w-full items-center justify-center rounded-full bg-slate-900 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60 sm:w-auto sm:px-4 sm:py-2"
                         >
                           Open Razorpay again
                         </button>
@@ -792,7 +792,7 @@ function Index() {
                   ) : (
                     <div
                       ref={checkoutContainerRef}
-                      className="h-[calc(100dvh-18rem)] min-h-[340px] w-full overflow-hidden rounded-[1.4rem] bg-white sm:h-[min(78vh,640px)] sm:min-h-[520px]"
+                      className="h-[min(50dvh,24rem)] min-h-[280px] w-full overflow-hidden rounded-[1.4rem] bg-white sm:h-[min(78vh,640px)] sm:min-h-[520px]"
                     />
                   )}
                 </div>
