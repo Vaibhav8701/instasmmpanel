@@ -214,6 +214,10 @@ function Index() {
     setRazorpayKeyId(null);
     razorpayCheckoutStartedRef.current = false;
 
+    if (gateway === "razorpay") {
+      setPayDialogOpen(false);
+    }
+
     try {
       await supabase.from("orders").insert({
         package_label: selected.label,
@@ -278,7 +282,9 @@ function Index() {
         setRazorpayKeyId(data.keyId);
       }
 
-      setPayDialogOpen(true);
+      if (gateway === "cashfree") {
+        setPayDialogOpen(true);
+      }
     } catch (err) {
       setPaymentError(err instanceof Error ? err.message : "Payment failed. Please try again.");
     } finally {
@@ -344,7 +350,7 @@ function Index() {
   }, [payDialogOpen, cashfreeOrderId, paymentSuccess, selectedPaymentGateway]);
 
   useEffect(() => {
-    if (!payDialogOpen || selectedPaymentGateway !== "razorpay" || !razorpayOrderId || paymentSuccess || paymentError) return;
+    if (selectedPaymentGateway !== "razorpay" || !razorpayOrderId || payDialogOpen || paymentSuccess || paymentError) return;
     if (razorpayCheckoutStartedRef.current) return;
 
     let cancelled = false;
