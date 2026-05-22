@@ -11,6 +11,8 @@ import whatsappIcon from "@/assets/whatsapp.png";
 import instagramIcon from "@/assets/instagram.png";
 import { supabase } from "@/integrations/supabase/client";
 import { getCashfree } from "@/lib/cashfree";
+import { ACTIVE_PAYMENT_GATEWAYS, type PaymentGateway } from "@/lib/payment-gateways";
+import { getRazorpayCheckout } from "@/lib/razorpay";
 
 const WHATSAPP_URL = "https://wa.me/916377613761";
 const INSTAGRAM_URL = "https://instagram.com/instasmm6";
@@ -103,6 +105,16 @@ function StepBadge({ n }: { n: number }) {
   );
 }
 
+function paymentGatewayLabel(gateway: PaymentGateway) {
+  return gateway === "cashfree" ? "Cashfree" : "Razorpay";
+}
+
+function paymentGatewayDescription(gateway: PaymentGateway) {
+  return gateway === "cashfree"
+    ? "Hosted checkout with QR and UPI apps"
+    : "Razorpay popup checkout with cards, UPI, and wallets";
+}
+
 function Index() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
@@ -116,10 +128,14 @@ function Index() {
   const [paymentQr, setPaymentQr] = useState<string | null>(null);
   const [cashfreeOrderId, setCashfreeOrderId] = useState<string | null>(null);
   const [paymentSessionId, setPaymentSessionId] = useState<string | null>(null);
+  const [razorpayOrderId, setRazorpayOrderId] = useState<string | null>(null);
+  const [razorpayKeyId, setRazorpayKeyId] = useState<string | null>(null);
+  const [selectedPaymentGateway, setSelectedPaymentGateway] = useState<PaymentGateway | null>(null);
   const checkoutContainerRef = useRef<HTMLDivElement | null>(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const razorpayCheckoutStartedRef = useRef(false);
 
   const phoneSectionRef = useRef<HTMLElement | null>(null);
   const usernameSectionRef = useRef<HTMLElement | null>(null);
@@ -130,6 +146,9 @@ function Index() {
   );
 
   const canPay = selected && phone.length === 10 && username.trim().length > 0;
+  const activeGateways = ACTIVE_PAYMENT_GATEWAYS;
+  const hasMultipleGateways = activeGateways.length > 1;
+  const hasAnyGateway = activeGateways.length > 0;
 
   const handleSelectPackage = (id: string) => {
     setSelectedId(id);
@@ -157,8 +176,118 @@ function Index() {
     setUsernameDialogOpen(false);
   };
 
+  const resetPaymentSession = () => {
+    setPaymentQr(null);
+    setCashfreeOrderId(null);
+    setPaymentSessionId(null);
+    setRazorpayOrderId(null);
+    setRazorpayKeyId(null);
+    setSelectedPaymentGateway(null);
+    setPaymentSuccess(false);
+    setPaymentError(null);
+    razorpayCheckoutStartedRef.current = false;
+  };
+
+  const openPaymentFlow = () => {
+    if (!canPay || !hasAnyGateway) return;
+
+    if (activeGateways.length === 1) {
+      void startPayment(activeGateways[0]);
+      return;
+    }
+
+    resetPaymentSession();
+    setPayDialogOpen(true);
+  };
+
+  async function startPayment(gateway: PaymentGateway) {
+    if (!canPay || !selected) return;
+
+    setPaymentLoading(true);
+    setPaymentError(null);
+    setPaymentSuccess(false);
+    setSelectedPaymentGateway(gateway);
+    setPaymentQr(null);
+    setCashfreeOrderId(null);
+    setPaymentSessionId(null);
+    setRazorpayOrderId(null);
+    setRazorpayKeyId(null);
+    razorpayCheckoutStartedRef.current = false;
+
+    try {
+      await supabase.from("orders").insert({
+        package_label: selected.label,
+        package_quantity: parseInt(selected.id.replace(/\D/g, ""), 10) || 0,
+        amount: selected.price,
+        phone,
+        profile_link: username,
+      });
+    } catch (err) {
+      console.error("Failed to save order", err);
+    }
+
+    try {
+      const res = await fetch("/api/payment/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: selected.price,
+          phone,
+          packageLabel: `${selected.label} followers`,
+          profileLink: username,
+          gateway,
+        }),
+      });
+
+      const text = await res.text();
+      let data: {
+        orderId?: string;
+        paymentSessionId?: string;
+        qrImage?: string | null;
+        razorpayOrderId?: string;
+        keyId?: string;
+        amountPaise?: number;
+        error?: string;
+      } = {};
+
+      try {
+        data = text ? (JSON.parse(text) as typeof data) : {};
+      } catch {
+        console.error("/api/payment/create returned non-JSON response:", text);
+        throw new Error(text || "Server returned an unexpected response");
+      }
+
+      if (!res.ok) {
+        throw new Error(data.error || `Could not start ${paymentGatewayLabel(gateway)} payment`);
+      }
+
+      if (gateway === "cashfree") {
+        if (!data.paymentSessionId || !data.orderId) {
+          throw new Error("Invalid Cashfree payment response from server");
+        }
+
+        setCashfreeOrderId(data.orderId);
+        setPaymentSessionId(data.paymentSessionId);
+        if (data.qrImage) setPaymentQr(data.qrImage);
+      } else {
+        if (!data.razorpayOrderId || !data.keyId) {
+          throw new Error("Invalid Razorpay payment response from server");
+        }
+
+        setRazorpayOrderId(data.razorpayOrderId);
+        setRazorpayKeyId(data.keyId);
+      }
+
+      setPayDialogOpen(true);
+    } catch (err) {
+      setPaymentError(err instanceof Error ? err.message : "Payment failed. Please try again.");
+    } finally {
+      setPaymentLoading(false);
+    }
+  }
+
   useEffect(() => {
-    if (!payDialogOpen || !paymentSessionId || paymentQr) return;
+    if (!payDialogOpen || selectedPaymentGateway !== "cashfree" || !paymentSessionId || paymentQr) return;
 
     let cancelled = false;
 
@@ -192,10 +321,10 @@ function Index() {
     return () => {
       cancelled = true;
     };
-  }, [payDialogOpen, paymentSessionId, paymentQr]);
+  }, [payDialogOpen, paymentSessionId, paymentQr, selectedPaymentGateway]);
 
   useEffect(() => {
-    if (!payDialogOpen || !cashfreeOrderId || paymentSuccess) return;
+    if (!payDialogOpen || selectedPaymentGateway !== "cashfree" || !cashfreeOrderId || paymentSuccess) return;
 
     const interval = window.setInterval(async () => {
       try {
@@ -212,74 +341,93 @@ function Index() {
     }, 3000);
 
     return () => window.clearInterval(interval);
-  }, [payDialogOpen, cashfreeOrderId, paymentSuccess]);
+  }, [payDialogOpen, cashfreeOrderId, paymentSuccess, selectedPaymentGateway]);
 
-  const startCashfreePayment = async () => {
-    if (!canPay || !selected) return;
+  useEffect(() => {
+    if (!payDialogOpen || selectedPaymentGateway !== "razorpay" || !razorpayOrderId || paymentSuccess || paymentError) return;
+    if (razorpayCheckoutStartedRef.current) return;
 
-    setPaymentLoading(true);
-    setPaymentError(null);
-    setPaymentSuccess(false);
-    setPaymentQr(null);
-    setCashfreeOrderId(null);
-    setPaymentSessionId(null);
+    let cancelled = false;
+    razorpayCheckoutStartedRef.current = true;
 
-    try {
-      await supabase.from("orders").insert({
-        package_label: selected.label,
-        package_quantity: parseInt(selected.id.replace(/\D/g, ""), 10) || 0,
-        amount: selected.price,
-        phone,
-        profile_link: username,
-      });
-    } catch (err) {
-      console.error("Failed to save order", err);
-    }
+    (async () => {
+      const Razorpay = await getRazorpayCheckout();
+      if (!Razorpay || cancelled) {
+        setPaymentError("Razorpay checkout failed to load");
+        return;
+      }
 
-    try {
-      const res = await fetch("/api/payment/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: selected.price,
-          phone,
-          packageLabel: `${selected.label} followers`,
+      const checkout = new Razorpay({
+        key: razorpayKeyId,
+        amount: selected?.price ? Math.round(selected.price * 100) : undefined,
+        currency: "INR",
+        name: "Instasmmpanel.in",
+        description: `${selected?.label ?? "Instagram"} followers`,
+        order_id: razorpayOrderId,
+        prefill: {
+          contact: phone,
+          name: "InstaSMM Customer",
+        },
+        notes: {
           profileLink: username,
-        }),
+        },
+        theme: {
+          color: "#e11d48",
+        },
+        modal: {
+          ondismiss: () => {
+            if (!paymentSuccess) {
+              setPaymentError("Payment window closed before completion");
+            }
+          },
+        },
+        handler: async (response: Record<string, string>) => {
+          try {
+            const verifyRes = await fetch("/api/payment/razorpay/verify", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                orderId: response.razorpay_order_id,
+                paymentId: response.razorpay_payment_id,
+                signature: response.razorpay_signature,
+              }),
+            });
+
+            const verifyText = await verifyRes.text();
+            let verifyData: { verified?: boolean; error?: string } = {};
+
+            try {
+              verifyData = verifyText ? (JSON.parse(verifyText) as typeof verifyData) : {};
+            } catch {
+              throw new Error(verifyText || "Unable to verify Razorpay payment");
+            }
+
+            if (!verifyRes.ok || !verifyData.verified) {
+              throw new Error(verifyData.error || "Razorpay verification failed");
+            }
+
+            setPaymentSuccess(true);
+            window.setTimeout(() => setPayDialogOpen(false), 2500);
+          } catch (err) {
+            setPaymentError(err instanceof Error ? err.message : "Razorpay payment verification failed");
+          }
+        },
       });
 
-      // Some server errors return HTML/text (platform errors) — handle gracefully
-      const text = await res.text();
-      let data: {
-        orderId?: string;
-        paymentSessionId?: string;
-        qrImage?: string | null;
-        error?: string;
-      } = {};
+      checkout.open();
+    })();
 
-      try {
-        data = text ? (JSON.parse(text) as typeof data) : {};
-      } catch (parseErr) {
-        console.error("/api/payment/create returned non-JSON response:", text);
-        throw new Error(text || "Server returned an unexpected response");
-      }
+    return () => {
+      cancelled = true;
+    };
+  }, [payDialogOpen, selectedPaymentGateway, razorpayOrderId, razorpayKeyId, paymentSuccess, paymentError, selected, phone, username]);
 
-      if (!res.ok) {
-        throw new Error(data.error || "Could not start Cashfree payment");
-      }
+  const startRazorpayPayment = () => startPayment("razorpay");
 
-      if (!data.paymentSessionId || !data.orderId) {
-        throw new Error("Invalid payment response from server");
-      }
-
-      setCashfreeOrderId(data.orderId);
-      setPaymentSessionId(data.paymentSessionId);
-      if (data.qrImage) setPaymentQr(data.qrImage);
-      setPayDialogOpen(true);
-    } catch (err) {
-      setPaymentError(err instanceof Error ? err.message : "Payment failed. Please try again.");
-    } finally {
-      setPaymentLoading(false);
+  const closePaymentDialog = (open: boolean) => {
+    setPayDialogOpen(open);
+    if (!open) {
+      resetPaymentSession();
     }
   };
 
@@ -388,13 +536,15 @@ function Index() {
 
         <button
           type="button"
-          disabled={!canPay || paymentLoading}
-          onClick={startCashfreePayment}
+          disabled={!canPay || paymentLoading || !hasAnyGateway}
+          onClick={openPaymentFlow}
           className={`flex w-full items-center justify-between rounded-2xl px-5 py-4 text-left text-white transition-all disabled:cursor-not-allowed disabled:opacity-60 ${canPay ? "pay-pulse ring-4 ring-brand-pink/40" : ""}`}
           style={{ background: canPay ? "var(--gradient-insta)" : "oklch(0.85 0.01 270)" }}
         >
           <div>
-            <div className="text-base font-bold">{paymentLoading ? "Starting payment…" : "Pay & Place Order"}</div>
+              <div className="text-base font-bold">
+                {paymentLoading ? "Starting payment…" : hasMultipleGateways ? "Choose payment method" : "Pay & Place Order"}
+              </div>
             <div className="text-xs opacity-90">
               {selected ? `${selected.label} followers` : "Select package to continue"}
             </div>
@@ -519,18 +669,7 @@ function Index() {
       </Dialog>
 
       {/* Cashfree UPI QR dialog */}
-      <Dialog
-        open={payDialogOpen}
-        onOpenChange={(open) => {
-          setPayDialogOpen(open);
-          if (!open) {
-            setPaymentQr(null);
-            setCashfreeOrderId(null);
-            setPaymentSessionId(null);
-            setPaymentSuccess(false);
-          }
-        }}
-      >
+      <Dialog open={payDialogOpen} onOpenChange={closePaymentDialog}>
         <DialogContent className="h-[100dvh] w-[100vw] max-w-none overflow-hidden border-0 bg-[#0b0b0f] p-0 text-white shadow-none sm:h-auto sm:w-[calc(100vw-1rem)] sm:max-w-5xl sm:rounded-3xl sm:border sm:border-white/10 sm:shadow-2xl">
           <div className="flex h-full flex-col md:grid md:min-h-[min(760px,calc(100vh-2rem))] md:grid-cols-[0.95fr_1.05fr]">
             <aside className="hidden flex-col justify-between bg-[radial-gradient(circle_at_top_left,rgba(236,72,153,0.22),transparent_32%),radial-gradient(circle_at_top_right,rgba(168,85,247,0.18),transparent_28%),linear-gradient(180deg,#0f0f15,#09090c)] px-5 py-6 sm:px-6 sm:py-7 md:flex">
@@ -576,15 +715,21 @@ function Index() {
               <div className="mb-3 rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.98),rgba(255,255,255,0.94))] px-4 py-4 text-slate-900 shadow-[0_10px_30px_rgba(15,23,42,0.08)] md:hidden">
                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Secure checkout</div>
                 <div className="mt-1 text-xl font-semibold leading-tight">Pay {formatINR(selected?.price ?? 0)}</div>
-                <div className="mt-1 text-sm text-slate-600">{selected?.label} followers • Cashfree</div>
+                <div className="mt-1 text-sm text-slate-600">{selected?.label} followers • {selectedPaymentGateway ? paymentGatewayLabel(selectedPaymentGateway) : "Choose gateway"}</div>
               </div>
 
               <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.6rem] bg-white shadow-[0_20px_80px_rgba(15,23,42,0.16)]">
                 <div className="border-b border-slate-200 px-4 py-3 sm:px-5 sm:py-4">
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <div className="text-sm font-semibold text-slate-900">Cashfree Checkout</div>
-                      <div className="text-xs text-slate-500">Scan, pay, and return here automatically</div>
+                      <div className="text-sm font-semibold text-slate-900">
+                        {selectedPaymentGateway ? `${paymentGatewayLabel(selectedPaymentGateway)} Checkout` : "Choose payment method"}
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        {selectedPaymentGateway
+                          ? paymentGatewayDescription(selectedPaymentGateway)
+                          : "Pick one of the available gateways to continue"}
+                      </div>
                     </div>
                     <div className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
                       {selected?.label}
@@ -593,7 +738,24 @@ function Index() {
                 </div>
 
                 <div className="min-h-0 flex-1 overflow-auto p-3 sm:p-4">
-                  {paymentSuccess ? (
+                  {!selectedPaymentGateway && hasMultipleGateways ? (
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {activeGateways.map((gateway) => (
+                        <button
+                          key={gateway}
+                          type="button"
+                          onClick={() => startPayment(gateway)}
+                          className="rounded-[1.4rem] border border-slate-200 bg-slate-50 p-5 text-left transition hover:border-brand-pink/40 hover:bg-white"
+                        >
+                          <div className="text-lg font-semibold text-slate-900">{paymentGatewayLabel(gateway)}</div>
+                          <div className="mt-1 text-sm leading-6 text-slate-600">{paymentGatewayDescription(gateway)}</div>
+                          <div className="mt-4 inline-flex rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white">
+                            Continue with {paymentGatewayLabel(gateway)}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  ) : paymentSuccess ? (
                     <div className="flex min-h-[340px] items-center justify-center rounded-[1.4rem] border border-emerald-200 bg-emerald-50 p-6 text-center sm:min-h-[420px]">
                       <div>
                         <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-2xl text-emerald-600">
@@ -603,11 +765,28 @@ function Index() {
                         <p className="mt-1 text-sm text-emerald-700">Your order is being processed now.</p>
                       </div>
                     </div>
-                  ) : paymentQr ? (
+                  ) : selectedPaymentGateway === "cashfree" && paymentQr ? (
                     <div className="flex min-h-[340px] items-center justify-center rounded-[1.4rem] border border-slate-200 bg-slate-50 p-3 sm:min-h-[420px] sm:p-6">
                       <div className="w-full max-w-sm rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-200 sm:max-w-md sm:p-4">
                         <img src={paymentQr} alt="Cashfree UPI QR" className="mx-auto aspect-square w-full max-w-[280px] object-contain sm:max-w-[360px]" />
                         <p className="mt-3 text-center text-xs text-slate-500">Open any UPI app and scan this QR code.</p>
+                      </div>
+                    </div>
+                  ) : selectedPaymentGateway === "razorpay" ? (
+                    <div className="flex min-h-[340px] items-center justify-center rounded-[1.4rem] border border-slate-200 bg-slate-50 p-4 text-center sm:min-h-[420px] sm:p-6">
+                      <div className="max-w-md rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+                        <div className="text-lg font-semibold text-slate-900">Razorpay popup will open automatically</div>
+                        <p className="mt-2 text-sm leading-6 text-slate-600">
+                          Complete the payment in the Razorpay window. You can pay by UPI, card, or wallet.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={startRazorpayPayment}
+                          disabled={paymentLoading}
+                          className="mt-4 inline-flex rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                        >
+                          Open Razorpay again
+                        </button>
                       </div>
                     </div>
                   ) : (

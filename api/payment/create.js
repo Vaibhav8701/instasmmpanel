@@ -6,6 +6,17 @@ function setJson(res, statusCode, payload) {
 
 const CF_API_VERSION = "2023-08-01";
 
+function parseEnabled(value, fallback) {
+  if (typeof value !== "string") return fallback;
+  return /^(1|true|yes|on)$/i.test(value.trim());
+}
+
+function getGatewayEnabled(name, fallback) {
+  const envKey = `VITE_PAYMENT_${name.toUpperCase()}_ENABLED`;
+  const legacyKey = `PAYMENT_${name.toUpperCase()}_ENABLED`;
+  return parseEnabled(process.env[envKey] ?? process.env[legacyKey], fallback);
+}
+
 function getCashfreeBaseUrl() {
   return process.env.CASHFREE_ENV === "sandbox"
     ? "https://sandbox.cashfree.com/pg"
@@ -124,6 +135,20 @@ function checkEnv() {
   };
 }
 
+function checkRazorpayEnv() {
+  return {
+    hasKeyId: Boolean(process.env.RAZORPAY_KEY_ID),
+    hasSecret: Boolean(process.env.RAZORPAY_KEY_SECRET),
+  };
+}
+
+function getAvailableGateways() {
+  return {
+    cashfree: getGatewayEnabled("cashfree", true),
+    razorpay: getGatewayEnabled("razorpay", false),
+  };
+}
+
 function normalizeCashfreeErrorMessage(message) {
   const text = String(message || "");
   if (/not enabled or approved|whitelist|whitelisting/i.test(text)) {
@@ -159,7 +184,42 @@ export default async function handler(req, res) {
     const body = req.body ?? {};
     console.log("[payment/create] bodyKeys", Object.keys(body));
 
-    const { amount, phone, packageLabel, profileLink } = body;
+    const { amount, phone, packageLabel, profileLink, gateway } = body;
+    const selectedGateway = String(gateway || "cashfree").toLowerCase();
+    const availableGateways = getAvailableGateways();
+
+    console.log("[payment/create] gateway", { selectedGateway });
+
+    if (!availableGateways[selectedGateway]) {
+      return setJson(res, 400, { error: `${selectedGateway} is disabled by server env` });
+    }
+
+    if (selectedGateway === "razorpay") {
+      const razorpayEnv = checkRazorpayEnv();
+
+      if (!razorpayEnv.hasKeyId || !razorpayEnv.hasSecret) {
+        console.error("[payment/create] missing razorpay env vars");
+        return setJson(res, 500, { error: "Razorpay credentials not configured on server" });
+      }
+
+      if (!amount || amount <= 0) {
+        return setJson(res, 400, { error: "Invalid amount" });
+      }
+      if (!phone || String(phone).replace(/\D/g, "").length !== 10) {
+        return setJson(res, 400, { error: "Valid 10-digit phone is required" });
+      }
+
+      const { createRazorpayPayment } = await import("../../server/razorpay.mjs");
+      const result = await createRazorpayPayment({
+        amount: Number(amount),
+        phone: String(phone).replace(/\D/g, ""),
+        packageLabel: packageLabel || "Instagram followers",
+        profileLink: profileLink || "",
+      });
+
+      console.log("[payment/create] success", { gateway: selectedGateway, orderId: result.orderId });
+      return setJson(res, 200, result);
+    }
 
     if (!envState.hasAppId || !envState.hasSecret) {
       console.error("[payment/create] missing cashfree env vars");
